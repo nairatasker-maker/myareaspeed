@@ -1,0 +1,7 @@
+{
+  "name": "myareaspeed",
+  "description": "An internet speed test web application that provides area-specific insights and community feedback, tailored for users in Nigeria and Africa.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
