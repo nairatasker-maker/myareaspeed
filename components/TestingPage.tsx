@@ -1,12 +1,11 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import type { TestStage, UserInfo } from '../types';
 import { useTranslation } from '../context/i18n';
 
 interface TestingPageProps {
     stage: TestStage;
-    downloadSpeed: number;
-    uploadSpeed: number;
-    uploadProgress: number;
+    internetSpeed: number;
     ping: number;
     userInfo: UserInfo;
     startTest: () => void;
@@ -14,8 +13,7 @@ interface TestingPageProps {
 
 const ESTIMATED_PING_DURATION = 2.5; // seconds
 const ESTIMATED_DOWNLOAD_DURATION = 10;
-const ESTIMATED_UPLOAD_DURATION = 10;
-const TOTAL_ESTIMATED_DURATION = ESTIMATED_PING_DURATION + ESTIMATED_DOWNLOAD_DURATION + ESTIMATED_UPLOAD_DURATION;
+const TOTAL_ESTIMATED_DURATION = ESTIMATED_PING_DURATION + ESTIMATED_DOWNLOAD_DURATION;
 
 
 const CircularGauge: React.FC<{ value: number, max: number }> = ({ value, max }) => {
@@ -46,9 +44,7 @@ const CircularGauge: React.FC<{ value: number, max: number }> = ({ value, max })
 
 export const TestingPage: React.FC<TestingPageProps> = ({
     stage,
-    downloadSpeed,
-    uploadSpeed,
-    uploadProgress,
+    internetSpeed,
     ping,
     userInfo,
     startTest,
@@ -79,7 +75,6 @@ export const TestingPage: React.FC<TestingPageProps> = ({
 
                 const pingWeight = ESTIMATED_PING_DURATION / TOTAL_ESTIMATED_DURATION;
                 const downloadWeight = ESTIMATED_DOWNLOAD_DURATION / TOTAL_ESTIMATED_DURATION;
-                const uploadWeight = ESTIMATED_UPLOAD_DURATION / TOTAL_ESTIMATED_DURATION;
 
                 let baseProgress = 0;
                 let stageProgress = 0;
@@ -94,11 +89,6 @@ export const TestingPage: React.FC<TestingPageProps> = ({
                         baseProgress = pingWeight;
                         const elapsedInStage = elapsedSeconds - ESTIMATED_PING_DURATION;
                         stageProgress = Math.min(elapsedInStage / ESTIMATED_DOWNLOAD_DURATION, 1) * downloadWeight;
-                        break;
-                    }
-                    case 'upload': {
-                        baseProgress = pingWeight + downloadWeight;
-                        stageProgress = (uploadProgress / 100) * uploadWeight;
                         break;
                     }
                 }
@@ -127,15 +117,15 @@ export const TestingPage: React.FC<TestingPageProps> = ({
             }
         };
 
-    }, [stage, uploadProgress]);
+    }, [stage]);
 
 
-    const currentSpeed = stage === 'download' ? downloadSpeed : uploadSpeed;
+    const currentSpeed = internetSpeed;
     const stageText = stage !== 'idle' && stage !== 'complete' && stage !== 'error' ? t(`stage_${stage}`) : '';
     const speedText = stage === 'ping' ? ping.toFixed(0) : currentSpeed.toFixed(2);
     const unitText = stage === 'ping' ? 'ms' : 'Mbps';
     const gaugeValue = stage === 'ping' ? ping : currentSpeed;
-    const gaugeMax = stage === 'ping' ? 100 : stage === 'download' ? 100 : 50;
+    const gaugeMax = stage === 'ping' ? 100 : 100;
 
 
     return (
@@ -168,18 +158,14 @@ export const TestingPage: React.FC<TestingPageProps> = ({
                     )}
 
 
-                     <div className="grid grid-cols-3 gap-4 mt-8 w-full max-w-lg">
+                     <div className="grid grid-cols-2 gap-4 mt-8 w-full max-w-lg">
                         <div className="text-center">
                             <p className="text-sm font-medium text-text-light/70 dark:text-text-dark/70">{t('ping').toUpperCase()}</p>
                             <p className="text-2xl font-bold text-text-light dark:text-text-dark">{ping.toFixed(0)} <span className="text-base font-medium text-text-light/70 dark:text-text-dark/70">ms</span></p>
                         </div>
                         <div className="text-center">
-                            <p className="text-sm font-medium text-text-light/70 dark:text-text-dark/70">{t('downloadSpeed').toUpperCase()}</p>
-                            <p className="text-2xl font-bold text-text-light dark:text-text-dark">{downloadSpeed.toFixed(2)} <span className="text-base font-medium text-text-light/70 dark:text-text-dark/70">Mbps</span></p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-sm font-medium text-text-light/70 dark:text-text-dark/70">{t('uploadSpeed').toUpperCase()}</p>
-                            <p className="text-2xl font-bold text-text-light dark:text-text-dark">{uploadSpeed.toFixed(2)} <span className="text-base font-medium text-text-light/70 dark:text-text-dark/70">Mbps</span></p>
+                            <p className="text-sm font-medium text-text-light/70 dark:text-text-dark/70">{t('internetSpeed').toUpperCase()}</p>
+                            <p className="text-2xl font-bold text-text-light dark:text-text-dark">{internetSpeed.toFixed(2)} <span className="text-base font-medium text-text-light/70 dark:text-text-dark/70">Mbps</span></p>
                         </div>
                     </div>
 

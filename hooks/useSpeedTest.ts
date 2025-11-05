@@ -1,28 +1,24 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { TestResult, TestStage } from '../types';
-import { testPing, testDownloadSpeed, testUploadSpeed } from '../services/speedTestService';
+import { testPing, testDownloadSpeed } from '../services/speedTestService';
 
 export const useSpeedTest = (onComplete: (result: TestResult) => void) => {
     const [stage, setStage] = useState<TestStage>('idle');
     const [ping, setPing] = useState(0);
     const [jitter, setJitter] = useState(0);
-    const [downloadSpeed, setDownloadSpeed] = useState(0);
-    const [uploadSpeed, setUploadSpeed] = useState(0);
-    const [uploadProgress, setUploadProgress] = useState(0);
+    const [internetSpeed, setInternetSpeed] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
-    const dataUsedRef = useRef({ download: 0, upload: 0 });
+    const dataUsedRef = useRef({ download: 0 });
 
     const startTest = useCallback(async () => {
         setStage('ping');
         setError(null);
         setPing(0);
         setJitter(0);
-        setDownloadSpeed(0);
-        setUploadSpeed(0);
-        setUploadProgress(0);
-        dataUsedRef.current = { download: 0, upload: 0 };
+        setInternetSpeed(0);
+        dataUsedRef.current = { download: 0 };
         
         try {
             const { ping, jitter } = await testPing();
@@ -31,47 +27,39 @@ export const useSpeedTest = (onComplete: (result: TestResult) => void) => {
 
             setStage('download');
             const finalDownloadSpeed = await testDownloadSpeed(
-                (speed) => setDownloadSpeed(speed),
+                (speed) => setInternetSpeed(speed),
                 (bytes) => dataUsedRef.current.download = bytes
             );
-            setDownloadSpeed(finalDownloadSpeed);
+            setInternetSpeed(finalDownloadSpeed);
             
-            setStage('upload');
-            const finalUploadSpeed = await testUploadSpeed(
-                (speed) => setUploadSpeed(speed),
-                (progress) => setUploadProgress(progress),
-                (bytes) => dataUsedRef.current.upload = bytes
-            );
-            setUploadSpeed(finalUploadSpeed);
-
             setStage('complete');
             
-            const totalDataUsedMB = (dataUsedRef.current.download + dataUsedRef.current.upload) / (1024 * 1024);
+            const totalDataUsedMB = (dataUsedRef.current.download) / (1024 * 1024);
 
             onComplete({
                 ping,
                 jitter,
-                downloadSpeed: parseFloat(finalDownloadSpeed.toFixed(2)),
-                uploadSpeed: parseFloat(finalUploadSpeed.toFixed(2)),
+                internetSpeed: parseFloat(finalDownloadSpeed.toFixed(2)),
                 dataUsed: parseFloat(totalDataUsedMB.toFixed(2)),
                 timestamp: Date.now(),
             });
 
+        // Fix: Complete the catch block and add a return statement for the hook.
         } catch (err) {
-            console.error(err);
-            setError("The speed test failed. Please try again.");
+            console.error("Speed test failed", err);
+            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
             setStage('error');
         }
     }, [onComplete]);
 
-    return {
-        stage,
-        ping,
-        jitter,
-        downloadSpeed,
-        uploadSpeed,
-        uploadProgress,
-        error,
-        startTest,
-    };
+    const resetTest = useCallback(() => {
+        setStage('idle');
+        setPing(0);
+        setJitter(0);
+        setInternetSpeed(0);
+        setError(null);
+        dataUsedRef.current = { download: 0 };
+    }, []);
+
+    return { stage, ping, jitter, internetSpeed, error, startTest, resetTest };
 };

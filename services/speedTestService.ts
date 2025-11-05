@@ -2,6 +2,31 @@
 const DOWNLOAD_URL = 'https://speed.cloudflare.com/__down';
 const UPLOAD_URL = 'https://speed.cloudflare.com/__up';
 
+/**
+ * Generates a Uint8Array with random data, handling crypto.getRandomValues limits.
+ * @param size The size of the array in bytes.
+ * @returns A Uint8Array filled with random data.
+ */
+function generateRandomData(size: number): Uint8Array {
+    const data = new Uint8Array(size);
+    const MAX_CRYPTO_CHUNK = 65536; // 64 KiB is the typical max size
+
+    // Use crypto.getRandomValues for better performance and randomness if available
+    if (window.crypto && window.crypto.getRandomValues) {
+        for (let i = 0; i < size; i += MAX_CRYPTO_CHUNK) {
+            const chunk = data.subarray(i, Math.min(i + MAX_CRYPTO_CHUNK, size));
+            window.crypto.getRandomValues(chunk);
+        }
+    } else {
+        // Fallback for older browsers or non-secure contexts
+        for (let i = 0; i < size; i++) {
+            data[i] = Math.floor(Math.random() * 256);
+        }
+    }
+    return data;
+}
+
+
 export async function testPing(): Promise<{ ping: number; jitter: number }> {
     const results: number[] = [];
     try {
@@ -79,82 +104,5 @@ export async function testDownloadSpeed(onProgress: (speedMbps: number) => void,
     const finalSpeedMbps = (totalBytes * 8) / totalTime / 1000000;
     onProgress(finalSpeedMbps);
     onDataUsed(totalBytes);
-    return finalSpeedMbps;
-}
-
-export async function testUploadSpeed(onProgress: (speedMbps: number) => void, onUploadProgress: (progress: number) => void, onDataUsed: (bytes: number) => void): Promise<number> {
-    const testDuration = 10000;
-    const chunkSize = 1024 * 1024;
-    const parallelConnections = 4;
-    const data = new Blob([new Uint8Array(chunkSize)], { type: 'application/octet-stream' });
-
-    let totalBytesUploaded = 0;
-    const startTime = Date.now();
-    const testEndTime = startTime + testDuration;
-
-    let isTestRunning = true;
-
-    const uploadWorker = async () => {
-        while (isTestRunning && Date.now() < testEndTime) {
-            try {
-                const response = await fetch(UPLOAD_URL, {
-                    method: 'POST',
-                    body: data,
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    mode: 'cors',
-                    signal: AbortSignal.timeout(5000),
-                });
-                if (response.ok) {
-                    totalBytesUploaded += chunkSize;
-                } else {
-                    console.warn(`Upload worker failed with status: ${response.status}`);
-                    break;
-                }
-            } catch (e) {
-                console.warn("Upload worker failed", e);
-                break;
-            }
-        }
-    };
-
-    const progressUpdater = () => {
-        if (!isTestRunning) return;
-        
-        const now = Date.now();
-        const elapsedMs = now - startTime;
-        const isDone = now >= testEndTime;
-
-        if (elapsedMs > 0) {
-            const speedMbps = (totalBytesUploaded * 8) / (elapsedMs / 1000) / 1000000;
-            onProgress(speedMbps);
-            onDataUsed(totalBytesUploaded);
-            const progress = Math.min((elapsedMs / testDuration) * 100, 100);
-            onUploadProgress(progress);
-        }
-
-        if (isDone) {
-            isTestRunning = false;
-        } else {
-            setTimeout(progressUpdater, 250);
-        }
-    };
-    
-    // Start progress updater
-    setTimeout(progressUpdater, 250);
-
-    const workers = Array(parallelConnections).fill(0).map(uploadWorker);
-    await Promise.all(workers);
-
-    isTestRunning = false; // Stop progress updater if workers finish early
-
-    const actualDurationMs = Math.max(Date.now() - startTime, 1);
-
-    const finalSpeedMbps = (totalBytesUploaded * 8) / (actualDurationMs / 1000) / 1000000;
-    
-    // Final update
-    onProgress(finalSpeedMbps);
-    onDataUsed(totalBytesUploaded);
-    onUploadProgress(100);
-
     return finalSpeedMbps;
 }

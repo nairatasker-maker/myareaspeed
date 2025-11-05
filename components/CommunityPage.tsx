@@ -45,11 +45,16 @@ const FeedbackCard: React.FC<{ feedback: CommunityFeedback; onHelpful: (id: stri
     return (
         <div className="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div className="flex justify-between items-start mb-3">
-                <div>
-                    <h3 className="font-bold text-lg">{feedback.location}</h3>
-                    <p className="text-sm text-text-light/70 dark:text-text-dark/70">{feedback.isp} &bull; {timeAgo.format(daysAgo, 'day')}</p>
+                <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-subtle-light dark:bg-subtle-dark flex items-center justify-center">
+                        <span className="material-symbols-outlined text-text-light/50 dark:text-text-dark/50">person</span>
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg">{feedback.location}</h3>
+                        <p className="text-sm text-text-light/70 dark:text-text-dark/70">{feedback.isp} &bull; {timeAgo.format(daysAgo, 'day')}</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1 font-bold text-lg">
+                <div className="flex items-center gap-1 font-bold text-lg flex-shrink-0">
                     {feedback.rating}
                     <span className="material-symbols-outlined !text-xl text-yellow-400">star</span>
                 </div>
@@ -61,14 +66,10 @@ const FeedbackCard: React.FC<{ feedback: CommunityFeedback; onHelpful: (id: stri
                 ))}
                  <span className="px-2 py-1 bg-subtle-light dark:bg-subtle-dark text-text-light/70 dark:text-text-dark/70 text-xs font-medium rounded-full">{t(`time_${feedback.timeOfDay}`)}</span>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center border-t border-border-light dark:border-border-dark pt-4 mb-4">
+            <div className="grid grid-cols-2 gap-2 text-center border-t border-border-light dark:border-border-dark pt-4 mb-4">
                 <div>
-                    <p className="text-xs text-text-light/70 dark:text-text-dark/70">{t('downloadSpeed')}</p>
-                    <p className="font-bold text-lg">{feedback.downloadSpeed.toFixed(1)} <span className="text-sm font-normal">Mbps</span></p>
-                </div>
-                <div>
-                    <p className="text-xs text-text-light/70 dark:text-text-dark/70">{t('uploadSpeed')}</p>
-                    <p className="font-bold text-lg">{feedback.uploadSpeed.toFixed(1)} <span className="text-sm font-normal">Mbps</span></p>
+                    <p className="text-xs text-text-light/70 dark:text-text-dark/70">{t('internetSpeed')}</p>
+                    <p className="font-bold text-lg">{feedback.internetSpeed.toFixed(1)} <span className="text-sm font-normal">Mbps</span></p>
                 </div>
                 <div>
                     <p className="text-xs text-text-light/70 dark:text-text-dark/70">{t('ping')}</p>
@@ -83,6 +84,7 @@ const FeedbackCard: React.FC<{ feedback: CommunityFeedback; onHelpful: (id: stri
     );
 };
 
+const AVAILABLE_ISPS = ['MTN Nigeria', 'Airtel', 'Glo', '9mobile'];
 
 export const CommunityPage: React.FC<CommunityPageProps> = (props) => {
     const { t } = useTranslation();
@@ -90,7 +92,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = (props) => {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
-    const [filters, setFilters] = useState<SearchFilters>({ sortBy: 'recent' });
+    const [filters, setFilters] = useState<SearchFilters>({ sortBy: 'recent', isp: [] });
     const [locationQuery, setLocationQuery] = useState('');
 
     const loadResults = useCallback((currentPage: number, currentFilters: SearchFilters) => {
@@ -111,6 +113,16 @@ export const CommunityPage: React.FC<CommunityPageProps> = (props) => {
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         setFilters(prev => ({ ...prev, location: locationQuery }));
+    };
+
+    const handleIspToggle = (ispName: string) => {
+        setFilters(prevFilters => {
+            const currentIsps = prevFilters.isp || [];
+            const newIsps = currentIsps.includes(ispName)
+                ? currentIsps.filter(isp => isp !== ispName)
+                : [...currentIsps, ispName];
+            return { ...prevFilters, isp: newIsps };
+        });
     };
 
     const handleHelpful = (id: string) => {
@@ -136,7 +148,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = (props) => {
                         <p className="mt-3 max-w-2xl mx-auto text-lg text-text-light/70 dark:text-text-dark/70">{t('communitySearchSubtitle')}</p>
                     </div>
 
-                    <form onSubmit={handleSearch} className="flex gap-2 max-w-2xl mx-auto mb-8">
+                    <form onSubmit={handleSearch} className="flex gap-2 max-w-2xl mx-auto mb-6">
                         <input
                             type="text"
                             value={locationQuery}
@@ -146,6 +158,24 @@ export const CommunityPage: React.FC<CommunityPageProps> = (props) => {
                         />
                          <button type="submit" className="rounded-full bg-primary px-6 text-base font-bold text-white transition-opacity hover:opacity-90">{t('search')}</button>
                     </form>
+
+                    <div className="max-w-3xl mx-auto mb-8">
+                        <div className="flex flex-wrap justify-center items-center gap-3">
+                            {AVAILABLE_ISPS.map((isp) => (
+                                <button
+                                    key={isp}
+                                    onClick={() => handleIspToggle(isp)}
+                                    className={`px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-colors ${
+                                        filters.isp?.includes(isp)
+                                            ? 'bg-primary/10 border-primary text-primary'
+                                            : 'bg-transparent border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark'
+                                    }`}
+                                >
+                                    {isp}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     
                     <div className="flex justify-center mb-8">
                         <div className="p-1 bg-subtle-light dark:bg-subtle-dark rounded-full flex items-center gap-1 text-sm">
@@ -173,7 +203,9 @@ export const CommunityPage: React.FC<CommunityPageProps> = (props) => {
                                 <button onClick={handleLoadMore} className="rounded-full bg-primary px-6 py-2 text-base font-bold text-white transition-opacity hover:opacity-90">
                                     {t('loadMore')}
                                 </button>
-                            ) : <p className="text-text-light/70 dark:text-text-dark/70">{t('noMoreResults')}</p>}
+                            ) : results.length > 0 ? (
+                                <p className="text-text-light/70 dark:text-text-dark/70">{t('noMoreResults')}</p>
+                            ) : null}
                         </div>
                     )}
                 </div>

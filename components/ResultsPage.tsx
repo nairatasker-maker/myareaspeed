@@ -8,6 +8,7 @@ import { useTranslation } from '../context/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { AppFooter } from './AppFooter';
 import { addFeedback } from '../services/communityService';
+import { isCommentSpam, canSubmitFeedback, recordFeedbackSubmission } from '../services/spamService';
 
 interface ResultsPageProps {
     result: TestResult;
@@ -52,8 +53,8 @@ const useCountUp = (end: number, duration: number = 1500) => {
 };
 
 
-const getSpeedStatus = (speed: number, type: 'download' | 'upload', t: (key: string) => string) => {
-    const thresholds = type === 'download' ? { fast: 50, average: 15 } : { fast: 20, average: 5 };
+const getSpeedStatus = (speed: number, t: (key: string) => string) => {
+    const thresholds = { fast: 50, average: 15 };
     if (speed >= thresholds.fast) return { label: t('statusFast'), color: 'text-status-fast' };
     if (speed >= thresholds.average) return { label: t('statusAverage'), color: 'text-status-average' };
     return { label: t('statusSlow'), color: 'text-status-slow' };
@@ -66,9 +67,9 @@ const getPingStatus = (ping: number, t: (key: string) => string) => {
 };
 
 const getRecommendation = (result: TestResult, t: (key: string) => string) => {
-    if (result.downloadSpeed > 25) return t("recommendation_great_4k");
-    if (result.downloadSpeed > 10) return t("recommendation_great_hd");
-    if (result.downloadSpeed > 5) return t("recommendation_good_calls");
+    if (result.internetSpeed > 25) return t("recommendation_great_4k");
+    if (result.internetSpeed > 10) return t("recommendation_great_hd");
+    if (result.internetSpeed > 5) return t("recommendation_good_calls");
     return t("recommendation_slow_video");
 };
 
@@ -123,12 +124,11 @@ const ShareModal: React.FC<{ isOpen: boolean; onClose: () => void; result: TestR
     const [isCopied, setIsCopied] = useState(false);
 
     const shareText = t('shareSummary', {
-        download: result.downloadSpeed.toFixed(2),
-        upload: result.uploadSpeed.toFixed(2),
+        speed: result.internetSpeed.toFixed(2),
         ping: result.ping.toFixed(0)
     });
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}?download=${result.downloadSpeed}&upload=${result.uploadSpeed}&ping=${result.ping}&jitter=${result.jitter}&dataUsed=${result.dataUsed}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?speed=${result.internetSpeed}&ping=${result.ping}&jitter=${result.jitter}&dataUsed=${result.dataUsed}`;
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -252,18 +252,29 @@ const FeedbackModal: React.FC<{
             alert(t('error_ratingRequired'));
             return;
         }
+
+        if (isCommentSpam(comment)) {
+            alert(t('spam_detected'));
+            return;
+        }
+
+        if (!canSubmitFeedback()) {
+            alert(t('rate_limit_error'));
+            return;
+        }
+
         const feedback: Omit<CommunityFeedback, 'id' | 'timestamp' | 'helpfulCount'> = {
             location,
             isp: userInfo.isp,
             rating,
-            downloadSpeed: result.downloadSpeed,
-            uploadSpeed: result.uploadSpeed,
+            internetSpeed: result.internetSpeed,
             ping: result.ping,
             tags,
             comment,
             timeOfDay,
         };
         addFeedback(feedback);
+        recordFeedbackSubmission();
         onSubmit();
         onClose();
     };
@@ -328,6 +339,59 @@ const FeedbackModal: React.FC<{
     );
 };
 
+const ResultsChart: React.FC<{ result: TestResult; isVisible: boolean; t: (key: string) => string }> = ({ result, isVisible, t }) => {
+    
+    const MAX_SPEED = 150;    // Mbps, for scaling
+    const MAX_PING = 150;    // ms, for scaling
+
+    const speedStatus = getSpeedStatus(result.internetSpeed, t);
+    const pingStatus = getPingStatus(result.ping, t);
+
+    const speedWidth = Math.min((result.internetSpeed / MAX_SPEED) * 100, 100);
+    const pingWidth = Math.min((result.ping / MAX_PING) * 100, 100);
+
+    const Bar: React.FC<{ label: string, value: string, width: number, colorClass: string, delay: number }> = ({ label, value, width, colorClass, delay }) => (
+        <div className="space-y-2">
+            <div className="flex justify-between items-baseline">
+                <span className="font-medium text-text-light/80 dark:text-text-dark/80">{label}</span>
+                <span className="font-bold text-lg text-text-light dark:text-text-dark">{value}</span>
+            </div>
+            <div className="w-full bg-subtle-light dark:bg-subtle-dark rounded-full h-3 overflow-hidden">
+                <div
+                    className={`h-3 rounded-full transition-all duration-1000 ease-out ${colorClass.replace('text-', 'bg-')}`}
+                    style={{ 
+                        width: isVisible ? `${width}%` : '0%',
+                        transitionDelay: `${delay}ms`
+                    }}
+                ></div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div 
+             className={`w-full rounded-xl bg-card-light dark:bg-card-dark p-6 shadow-sm transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'}`}
+             style={{ transitionDelay: '450ms' }} // Stagger after the main cards
+        >
+            <div className="space-y-6">
+                <Bar 
+                    label={t('internetSpeed')} 
+                    value={`${result.internetSpeed.toFixed(2)} Mbps`}
+                    width={speedWidth}
+                    colorClass={speedStatus.color}
+                    delay={0}
+                />
+                <Bar 
+                    label={t('ping')} 
+                    value={`${result.ping.toFixed(0)} ms`}
+                    width={pingWidth}
+                    colorClass={pingStatus.color}
+                    delay={150}
+                />
+            </div>
+        </div>
+    );
+};
 
 export const ResultsPage: React.FC<ResultsPageProps> = ({ result, userInfo, onTestAgain, theme, toggleTheme, setView }) => {
     const [isMounted, setIsMounted] = useState(false);
@@ -345,31 +409,20 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, userInfo, onTe
         setFeedbackSubmitted(true);
     };
 
-    const downloadStatus = getSpeedStatus(result.downloadSpeed, 'download', t);
-    const uploadStatus = getSpeedStatus(result.uploadSpeed, 'upload', t);
+    const internetStatus = getSpeedStatus(result.internetSpeed, t);
     const pingStatus = getPingStatus(result.ping, t);
 
-    const animatedDownload = useCountUp(result.downloadSpeed, 1200);
-    const animatedUpload = useCountUp(result.uploadSpeed, 1200);
+    const animatedSpeed = useCountUp(result.internetSpeed, 1200);
     const animatedPing = useCountUp(result.ping, 1000);
 
     const metrics = [
         {
-            id: 'download',
-            title: t('downloadSpeed'),
-            value: animatedDownload,
+            id: 'speed',
+            title: t('internetSpeed'),
+            value: animatedSpeed,
             unit: 'Mbps',
-            status: downloadStatus,
-            icon: 'south',
-            format: (val: number) => val.toFixed(2),
-        },
-        {
-            id: 'upload',
-            title: t('uploadSpeed'),
-            value: animatedUpload,
-            unit: 'Mbps',
-            status: uploadStatus,
-            icon: 'north',
+            status: internetStatus,
+            icon: 'speed',
             format: (val: number) => val.toFixed(2),
         },
         {
@@ -393,11 +446,14 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ result, userInfo, onTe
                             <p className="text-4xl font-black leading-tight tracking-tight sm:text-5xl">{t('yourResults')}</p>
                             <p className="text-lg text-text-light/70 dark:text-text-dark/70">{t('resultsSubtitle')}</p>
                         </div>
-                        <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-3">
+                        <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2">
                            {metrics.map((metric, index) => (
                                <ResultCard key={metric.id} metric={metric} isVisible={isMounted} delay={index * 150} />
                            ))}
                         </div>
+
+                        <ResultsChart result={result} isVisible={isMounted} t={t} />
+
                         <div className="w-full rounded-xl bg-card-light dark:bg-card-dark p-8 shadow-sm">
                             <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                                 <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

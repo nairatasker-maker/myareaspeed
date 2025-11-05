@@ -11,8 +11,7 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         location: 'Lekki Phase 1, Lagos',
         isp: 'MTN Nigeria',
         rating: 4,
-        downloadSpeed: 55.2,
-        uploadSpeed: 12.5,
+        internetSpeed: 55.2,
         ping: 25,
         tags: ['streaming', 'wfh'],
         comment: 'Generally reliable for work and streaming Netflix in the evenings. Sometimes slows down during peak hours.',
@@ -25,8 +24,7 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         location: 'Ikeja, Lagos',
         isp: 'Airtel',
         rating: 3,
-        downloadSpeed: 25.8,
-        uploadSpeed: 8.1,
+        internetSpeed: 25.8,
         ping: 45,
         tags: ['browsing', 'video_calls'],
         comment: 'It\'s okay for browsing, but video calls can be a bit choppy, especially in the afternoon.',
@@ -39,8 +37,7 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         location: 'Wuse 2, Abuja',
         isp: 'Glo',
         rating: 2,
-        downloadSpeed: 8.5,
-        uploadSpeed: 2.3,
+        internetSpeed: 8.5,
         ping: 88,
         tags: ['gaming'],
         comment: 'Not great for gaming. The ping is too high and I get a lot of lag spikes. Basic browsing is fine though.',
@@ -53,8 +50,7 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         location: 'Bodija, Ibadan',
         isp: '9mobile',
         rating: 4,
-        downloadSpeed: 30.1,
-        uploadSpeed: 15.6,
+        internetSpeed: 30.1,
         ping: 30,
         tags: ['wfh', 'video_calls'],
         comment: 'Surprisingly good for working from home. Stable connection for Zoom calls.',
@@ -67,8 +63,7 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         location: 'Asokoro, Abuja',
         isp: 'MTN Nigeria',
         rating: 5,
-        downloadSpeed: 90.7,
-        uploadSpeed: 25.2,
+        internetSpeed: 90.7,
         ping: 18,
         tags: ['streaming', 'gaming'],
         comment: 'Excellent speed, can handle multiple 4K streams and online gaming without any issues. Very impressed.',
@@ -112,75 +107,86 @@ export const addFeedback = (newFeedback: Omit<CommunityFeedback, 'id' | 'timesta
     saveFeedback(updatedFeedback);
 };
 
+// Fix: Add missing SearchFilters interface and searchFeedback/markAsHelpful functions.
 export interface SearchFilters {
     location?: string;
     isp?: string[];
-    minRating?: number;
-    tags?: ExperienceTag[];
     sortBy?: 'recent' | 'helpful' | 'speed-fast';
 }
 
-export const searchFeedback = (filters: SearchFilters, page: number, limit: number = 10) => {
-    const allFeedback = getFeedback();
-    let filtered = allFeedback;
+const PAGE_SIZE = 9;
+
+export const searchFeedback = (filters: SearchFilters, page: number = 1): { results: CommunityFeedback[], hasMore: boolean } => {
+    let allFeedback = getFeedback();
 
     if (filters.location) {
         const query = filters.location.toLowerCase();
-        filtered = filtered.filter(f => f.location.toLowerCase().includes(query));
+        allFeedback = allFeedback.filter(f => 
+            f.location.toLowerCase().includes(query) ||
+            f.isp.toLowerCase().includes(query) ||
+            f.comment.toLowerCase().includes(query)
+        );
     }
+    
     if (filters.isp && filters.isp.length > 0) {
-        filtered = filtered.filter(f => filters.isp!.includes(f.isp));
-    }
-    if (filters.minRating) {
-        filtered = filtered.filter(f => f.rating >= filters.minRating!);
-    }
-    if (filters.tags && filters.tags.length > 0) {
-        filtered = filtered.filter(f => f.tags.some(tag => filters.tags!.includes(tag)));
+        allFeedback = allFeedback.filter(f => filters.isp!.includes(f.isp));
     }
 
     switch (filters.sortBy) {
         case 'helpful':
-            filtered.sort((a, b) => b.helpfulCount - a.helpfulCount);
+            allFeedback.sort((a, b) => b.helpfulCount - a.helpfulCount);
             break;
         case 'speed-fast':
-            filtered.sort((a, b) => b.downloadSpeed - a.downloadSpeed);
+            allFeedback.sort((a, b) => b.internetSpeed - a.internetSpeed);
             break;
         case 'recent':
         default:
-            filtered.sort((a, b) => b.timestamp - a.timestamp);
+            allFeedback.sort((a, b) => b.timestamp - a.timestamp);
             break;
     }
 
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginated = filtered.slice(startIndex, endIndex);
+    const startIndex = (page - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    const results = allFeedback.slice(startIndex, endIndex);
+    const hasMore = endIndex < allFeedback.length;
 
-    return {
-        results: paginated,
-        hasMore: endIndex < filtered.length,
-        total: filtered.length,
-    };
+    return { results, hasMore };
 };
 
-export const markAsHelpful = (feedbackId: string): boolean => {
+const getHelpfulIds = (): string[] => {
     try {
-        const markedHelpful: string[] = JSON.parse(localStorage.getItem(HELPFUL_FEEDBACK_KEY) || '[]');
-        if (markedHelpful.includes(feedbackId)) {
-            return false; // Already marked
-        }
-
-        const allFeedback = getFeedback();
-        const feedbackToUpdate = allFeedback.find(f => f.id === feedbackId);
-        if (feedbackToUpdate) {
-            feedbackToUpdate.helpfulCount += 1;
-            saveFeedback(allFeedback);
-            markedHelpful.push(feedbackId);
-            localStorage.setItem(HELPFUL_FEEDBACK_KEY, JSON.stringify(markedHelpful));
-            return true;
-        }
-        return false;
+        const stored = localStorage.getItem(HELPFUL_FEEDBACK_KEY);
+        return stored ? JSON.parse(stored) : [];
     } catch (error) {
-        console.error("Could not mark feedback as helpful.", error);
-        return false;
+        console.error("Could not get helpful IDs from localStorage", error);
+        return [];
     }
-}
+};
+
+const saveHelpfulIds = (ids: string[]) => {
+    try {
+        localStorage.setItem(HELPFUL_FEEDBACK_KEY, JSON.stringify(ids));
+    } catch (error) {
+        console.error("Could not save helpful IDs to localStorage", error);
+    }
+};
+
+export const markAsHelpful = (id: string): boolean => {
+    const helpfulIds = getHelpfulIds();
+    if (helpfulIds.includes(id)) {
+        return false; // Already marked as helpful
+    }
+
+    const allFeedback = getFeedback();
+    const feedbackIndex = allFeedback.findIndex(f => f.id === id);
+
+    if (feedbackIndex === -1) {
+        return false; // Feedback not found
+    }
+
+    allFeedback[feedbackIndex].helpfulCount += 1;
+    saveFeedback(allFeedback);
+    
+    saveHelpfulIds([...helpfulIds, id]);
+    return true;
+};

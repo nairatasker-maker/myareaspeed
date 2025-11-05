@@ -10,6 +10,7 @@ interface AppFooterProps {
 
 export const AppFooter: React.FC<AppFooterProps> = ({ setView }) => {
     const { t } = useTranslation();
+    const currentYear = new Date().getFullYear();
     return (
         <footer className="w-full mt-auto text-center border-t border-solid border-subtle-light dark:border-subtle-dark">
             <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
@@ -22,7 +23,7 @@ export const AppFooter: React.FC<AppFooterProps> = ({ setView }) => {
                 <div className="flex justify-center my-6">
                      <LanguageSwitcher />
                 </div>
-                <p className="text-text-light/60 dark:text-text-dark/60 text-sm">{t('copyright')}</p>
+                <p className="text-text-light/60 dark:text-text-dark/60 text-sm">{t('copyright', { year: currentYear })}</p>
             </div>
         </footer>
     );

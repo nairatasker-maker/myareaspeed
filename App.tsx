@@ -50,14 +50,12 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         // Check for shared results in URL on initial load
         const urlParams = new URLSearchParams(window.location.search);
-        const download = urlParams.get('download');
-        const upload = urlParams.get('upload');
+        const speed = urlParams.get('speed');
         const ping = urlParams.get('ping');
 
-        if (download && upload && ping) {
+        if (speed && ping) {
             const sharedResult: TestResult = {
-                downloadSpeed: parseFloat(download),
-                uploadSpeed: parseFloat(upload),
+                internetSpeed: parseFloat(speed),
                 ping: parseInt(ping, 10),
                 jitter: parseInt(urlParams.get('jitter') || '0', 10),
                 dataUsed: parseFloat(urlParams.get('dataUsed') || '0'),
@@ -114,7 +112,7 @@ const AppContent: React.FC = () => {
         setView('results');
     }, []);
     
-    const { stage, downloadSpeed, uploadSpeed, uploadProgress, ping, startTest } = useSpeedTest(handleTestComplete);
+    const { stage, internetSpeed, ping, startTest, resetTest } = useSpeedTest(handleTestComplete);
 
     const handleStartTest = () => {
         setView('testing');
@@ -122,6 +120,7 @@ const AppContent: React.FC = () => {
 
     const handleTestAgain = () => {
         setLatestResult(null);
+        resetTest();
         setView('testing');
     };
 
@@ -131,9 +130,7 @@ const AppContent: React.FC = () => {
                 return (
                     <TestingPage
                         stage={stage}
-                        downloadSpeed={downloadSpeed}
-                        uploadSpeed={uploadSpeed}
-                        uploadProgress={uploadProgress}
+                        internetSpeed={internetSpeed}
                         ping={ping}
                         userInfo={userInfo}
                         startTest={startTest}

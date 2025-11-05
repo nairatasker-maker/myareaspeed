@@ -38,15 +38,39 @@ export const ContactPage: React.FC<PageProps> = (props) => {
         <div className="flex flex-col min-h-screen">
             <PageHeader {...props} title={t('contact')} />
             <main className="flex-grow">
-                <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-                     <div className="prose dark:prose-invert prose-lg prose-h1:font-bold prose-h1:text-3xl prose-p:leading-relaxed">
-                        <h1>{t('contactTitle')}</h1>
-                        <p>{t('contactIntro')}</p>
-                        <div className="not-prose mt-8 p-6 rounded-xl bg-subtle-light dark:bg-subtle-dark">
-                            <h3 className="font-bold text-xl">Kobowallet Innovation</h3>
-                            <p className="mt-2">123 Tech Avenue, Silicon Lagoon</p>
-                            <p>Lagos, Nigeria</p>
-                            <p className="mt-4"><a href="mailto:hello@myareaspeed.com" className="text-link-light dark:text-link-dark">hello@myareaspeed.com</a></p>
+                <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
+                    <div className="text-center">
+                        <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t('contactTitle')}</h1>
+                        <p className="mt-6 mx-auto max-w-2xl text-lg text-text-light/70 dark:text-text-dark/70">{t('contactIntro')}</p>
+                    </div>
+
+                    <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="p-8 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-center">
+                            <span className="material-symbols-outlined !text-4xl text-primary">mail</span>
+                            <h2 className="mt-4 text-xl font-bold">{t('contactGeneralTitle')}</h2>
+                            <p className="mt-2 text-text-light/70 dark:text-text-dark/70">{t('contactGeneralText')}</p>
+                            <a href={`mailto:${t('contactGeneralEmail')}`} className="mt-4 inline-block font-bold text-primary hover:underline">{t('contactGeneralEmail')}</a>
+                        </div>
+                        <div className="p-8 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-center">
+                            <span className="material-symbols-outlined !text-4xl text-primary">business_center</span>
+                            <h2 className="mt-4 text-xl font-bold">{t('contactPartnershipsTitle')}</h2>
+                            <p className="mt-2 text-text-light/70 dark:text-text-dark/70">{t('contactPartnershipsText')}</p>
+                            <a href={`mailto:${t('contactPartnershipsEmail')}`} className="mt-4 inline-block font-bold text-primary hover:underline">{t('contactPartnershipsEmail')}</a>
+                        </div>
+                        <div className="p-8 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-center">
+                            <span className="material-symbols-outlined !text-4xl text-primary">campaign</span>
+                            <h2 className="mt-4 text-xl font-bold">{t('contactPressTitle')}</h2>
+                            <p className="mt-2 text-text-light/70 dark:text-text-dark/70">{t('contactPressText')}</p>
+                            <a href={`mailto:${t('contactPressEmail')}`} className="mt-4 inline-block font-bold text-primary hover:underline">{t('contactPressEmail')}</a>
+                        </div>
+                    </div>
+
+                    <div className="mt-16 text-center border-t border-border-light dark:border-border-dark pt-12">
+                        <h2 className="text-2xl font-bold">{t('contactAddressTitle')}</h2>
+                        <div className="mt-4 text-lg text-text-light/80 dark:text-text-dark/80">
+                            <p>{t('contactAddressLine1')}</p>
+                            <p>{t('contactAddressLine2')}</p>
+                            <p>{t('contactAddressLine3')}</p>
                         </div>
                     </div>
                 </div>
