@@ -1,46 +1,67 @@
 
-export type TestStage = 'idle' | 'ping' | 'download' | 'complete' | 'error';
+
+export type TestStage = 'idle' | 'ping' | 'download' | 'upload' | 'complete' | 'error';
 
 export interface TestResult {
     ping: number;
     jitter: number;
-    internetSpeed: number;
+    internetSpeed: number; // download speed
+    uploadSpeed: number;
     dataUsed: number;
     timestamp: number;
+    downloadHistory?: number[];
+    uploadHistory?: number[];
 }
 
 export interface UserInfo {
     isp: string;
     city: string;
+    region: string;
     country: string;
     ip: string;
+    os: string;
+    browser: string;
+    lat?: number;
+    lng?: number;
 }
 
-export interface NetworkStat {
-    name: string;
-    percentage: number;
-    color: string;
-}
+export type UserAgentPresetKey = 'default' | 'iphone' | 'android' | 'windows';
 
-export interface AverageSpeed {
-    name: string;
-    speed: number;
-}
-
-// New types for Community Feedback
-export type ExperienceTag = 'streaming' | 'gaming' | 'video_calls' | 'browsing' | 'wfh';
-export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
+export type Navigate = (path: string) => void;
 
 export interface CommunityFeedback {
     id: string;
     location: string;
     isp: string;
-    rating: number; // 1-5
+    rating: number;
     internetSpeed: number;
+    uploadSpeed: number;
     ping: number;
-    tags: ExperienceTag[];
+    jitter: number;
     comment: string;
-    timeOfDay: TimeOfDay;
     timestamp: number;
-    helpfulCount: number;
+}
+
+// FIX: Add missing Coordinates type for geocoding service.
+export type Coordinates = {
+    lat: number;
+    lng: number;
+};
+
+// FIX: Add missing UserMapLocation type for map component.
+export interface UserMapLocation {
+    lat: number;
+    lng: number;
+    city: string;
+}
+
+// FIX: Add missing FeedbackMapLocation type for map component.
+export interface FeedbackMapLocation {
+    id: string;
+    lat: number;
+    lng: number;
+    isp: string;
+    speed: number; // This is download speed
+    rating: number;
+    comment?: string;
 }

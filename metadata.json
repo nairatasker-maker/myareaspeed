@@ -1,6 +1,6 @@
 {
   "name": "myareaspeed",
-  "description": "An internet speed test web application that provides area-specific insights and community feedback, tailored for users in Nigeria and Africa.",
+  "description": "An advanced internet speed test application providing hyper-local insights and community-driven feedback, specifically tailored for users in Nigeria and across Africa.",
   "requestFramePermissions": [
     "geolocation"
   ]

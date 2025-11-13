@@ -1,8 +1,6 @@
-
-import type { CommunityFeedback, TimeOfDay, ExperienceTag } from '../types';
+import type { CommunityFeedback } from '../types';
 
 const MOCK_FEEDBACK_KEY = 'communityFeedback';
-const HELPFUL_FEEDBACK_KEY = 'helpfulFeedback';
 
 // Initial mock data to populate the service if localStorage is empty
 const INITIAL_MOCK_DATA: CommunityFeedback[] = [
@@ -12,12 +10,12 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         isp: 'MTN Nigeria',
         rating: 4,
         internetSpeed: 55.2,
+        // FIX: Add missing 'uploadSpeed' property.
+        uploadSpeed: 15.6,
         ping: 25,
-        tags: ['streaming', 'wfh'],
+        jitter: 5,
         comment: 'Generally reliable for work and streaming Netflix in the evenings. Sometimes slows down during peak hours.',
-        timeOfDay: 'evening',
         timestamp: Date.now() - 86400000 * 2, // 2 days ago
-        helpfulCount: 15,
     },
     {
         id: '2',
@@ -25,12 +23,12 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         isp: 'Airtel',
         rating: 3,
         internetSpeed: 25.8,
+        // FIX: Add missing 'uploadSpeed' property.
+        uploadSpeed: 8.2,
         ping: 45,
-        tags: ['browsing', 'video_calls'],
+        jitter: 12,
         comment: 'It\'s okay for browsing, but video calls can be a bit choppy, especially in the afternoon.',
-        timeOfDay: 'afternoon',
         timestamp: Date.now() - 86400000 * 5, // 5 days ago
-        helpfulCount: 7,
     },
     {
         id: '3',
@@ -38,12 +36,12 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         isp: 'Glo',
         rating: 2,
         internetSpeed: 8.5,
+        // FIX: Add missing 'uploadSpeed' property.
+        uploadSpeed: 2.1,
         ping: 88,
-        tags: ['gaming'],
+        jitter: 25,
         comment: 'Not great for gaming. The ping is too high and I get a lot of lag spikes. Basic browsing is fine though.',
-        timeOfDay: 'night',
         timestamp: Date.now() - 86400000 * 1, // 1 day ago
-        helpfulCount: 22,
     },
     {
         id: '4',
@@ -51,29 +49,16 @@ const INITIAL_MOCK_DATA: CommunityFeedback[] = [
         isp: '9mobile',
         rating: 4,
         internetSpeed: 30.1,
+        // FIX: Add missing 'uploadSpeed' property.
+        uploadSpeed: 11.5,
         ping: 30,
-        tags: ['wfh', 'video_calls'],
+        jitter: 8,
         comment: 'Surprisingly good for working from home. Stable connection for Zoom calls.',
-        timeOfDay: 'morning',
         timestamp: Date.now() - 86400000 * 10, // 10 days ago
-        helpfulCount: 12,
     },
-    {
-        id: '5',
-        location: 'Asokoro, Abuja',
-        isp: 'MTN Nigeria',
-        rating: 5,
-        internetSpeed: 90.7,
-        ping: 18,
-        tags: ['streaming', 'gaming'],
-        comment: 'Excellent speed, can handle multiple 4K streams and online gaming without any issues. Very impressed.',
-        timeOfDay: 'evening',
-        timestamp: Date.now() - 86400000 * 3, // 3 days ago
-        helpfulCount: 31,
-    }
 ];
 
-const getFeedback = (): CommunityFeedback[] => {
+export const getFeedback = (): CommunityFeedback[] => {
     try {
         const storedData = localStorage.getItem(MOCK_FEEDBACK_KEY);
         if (storedData) {
@@ -95,98 +80,32 @@ const saveFeedback = (feedback: CommunityFeedback[]) => {
     }
 };
 
-export const addFeedback = (newFeedback: Omit<CommunityFeedback, 'id' | 'timestamp' | 'helpfulCount'>) => {
+export const addFeedback = (newFeedback: Omit<CommunityFeedback, 'id' | 'timestamp'>) => {
     const allFeedback = getFeedback();
     const feedbackToAdd: CommunityFeedback = {
         ...newFeedback,
         id: new Date().toISOString() + Math.random(),
         timestamp: Date.now(),
-        helpfulCount: 0,
     };
     const updatedFeedback = [feedbackToAdd, ...allFeedback];
     saveFeedback(updatedFeedback);
 };
 
-// Fix: Add missing SearchFilters interface and searchFeedback/markAsHelpful functions.
-export interface SearchFilters {
-    location?: string;
-    isp?: string[];
-    sortBy?: 'recent' | 'helpful' | 'speed-fast';
-}
 
-const PAGE_SIZE = 9;
-
-export const searchFeedback = (filters: SearchFilters, page: number = 1): { results: CommunityFeedback[], hasMore: boolean } => {
+export const searchFeedback = (query: string): CommunityFeedback[] => {
     let allFeedback = getFeedback();
-
-    if (filters.location) {
-        const query = filters.location.toLowerCase();
-        allFeedback = allFeedback.filter(f => 
-            f.location.toLowerCase().includes(query) ||
-            f.isp.toLowerCase().includes(query) ||
-            f.comment.toLowerCase().includes(query)
-        );
-    }
     
-    if (filters.isp && filters.isp.length > 0) {
-        allFeedback = allFeedback.filter(f => filters.isp!.includes(f.isp));
+    // Always sort by most recent first
+    allFeedback.sort((a, b) => b.timestamp - a.timestamp);
+
+    if (!query) {
+        return allFeedback;
     }
 
-    switch (filters.sortBy) {
-        case 'helpful':
-            allFeedback.sort((a, b) => b.helpfulCount - a.helpfulCount);
-            break;
-        case 'speed-fast':
-            allFeedback.sort((a, b) => b.internetSpeed - a.internetSpeed);
-            break;
-        case 'recent':
-        default:
-            allFeedback.sort((a, b) => b.timestamp - a.timestamp);
-            break;
-    }
-
-    const startIndex = (page - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    const results = allFeedback.slice(startIndex, endIndex);
-    const hasMore = endIndex < allFeedback.length;
-
-    return { results, hasMore };
-};
-
-const getHelpfulIds = (): string[] => {
-    try {
-        const stored = localStorage.getItem(HELPFUL_FEEDBACK_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-        console.error("Could not get helpful IDs from localStorage", error);
-        return [];
-    }
-};
-
-const saveHelpfulIds = (ids: string[]) => {
-    try {
-        localStorage.setItem(HELPFUL_FEEDBACK_KEY, JSON.stringify(ids));
-    } catch (error) {
-        console.error("Could not save helpful IDs to localStorage", error);
-    }
-};
-
-export const markAsHelpful = (id: string): boolean => {
-    const helpfulIds = getHelpfulIds();
-    if (helpfulIds.includes(id)) {
-        return false; // Already marked as helpful
-    }
-
-    const allFeedback = getFeedback();
-    const feedbackIndex = allFeedback.findIndex(f => f.id === id);
-
-    if (feedbackIndex === -1) {
-        return false; // Feedback not found
-    }
-
-    allFeedback[feedbackIndex].helpfulCount += 1;
-    saveFeedback(allFeedback);
-    
-    saveHelpfulIds([...helpfulIds, id]);
-    return true;
+    const lowerCaseQuery = query.toLowerCase().trim();
+    return allFeedback.filter(f => 
+        f.location.toLowerCase().includes(lowerCaseQuery) ||
+        f.isp.toLowerCase().includes(lowerCaseQuery) ||
+        f.comment.toLowerCase().includes(lowerCaseQuery)
+    );
 };

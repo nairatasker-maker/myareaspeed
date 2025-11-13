@@ -1,6 +1,5 @@
-
-import React from 'react';
-import type { AppView, Theme } from '../App';
+import React, { useEffect } from 'react';
+import type { Navigate } from '../types';
 import { useTranslation } from '../context/i18n';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -8,20 +7,35 @@ import { LogoIcon } from './icons';
 import { AppFooter } from './AppFooter';
 
 interface PageProps {
-    theme: Theme;
+    theme: 'light' | 'dark';
     toggleTheme: () => void;
-    setView: (view: AppView) => void;
+    navigate: Navigate;
 }
 
-const PageHeader: React.FC<PageProps & { title: string }> = ({ theme, toggleTheme, setView, title }) => {
+const useSEOTags = (title: string, description: string) => {
+    useEffect(() => {
+        if (title) document.title = title;
+        if (description) {
+            let meta = document.querySelector('meta[name="description"]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.setAttribute('name', 'description');
+                document.head.appendChild(meta);
+            }
+            meta.setAttribute('content', description);
+        }
+    }, [title, description]);
+};
+
+const PageHeader: React.FC<PageProps & { title: string }> = ({ theme, toggleTheme, navigate, title }) => {
     return (
         <header className="w-full">
             <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark py-4">
-                    <button onClick={() => setView('home')} className="flex items-center gap-3 cursor-pointer">
+                    <a href="#/" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="flex items-center gap-3 cursor-pointer">
                         <LogoIcon />
                         <h1 className="text-xl font-bold leading-tight">{title}</h1>
-                    </button>
+                    </a>
                     <div className="flex items-center gap-4">
                         <LanguageSwitcher />
                         <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
@@ -34,6 +48,10 @@ const PageHeader: React.FC<PageProps & { title: string }> = ({ theme, toggleThem
 
 export const ContactPage: React.FC<PageProps> = (props) => {
     const { t } = useTranslation();
+    useSEOTags(
+        `${t('contactTitle')} | myareaspeed`,
+        t('contactIntro')
+    );
     return (
         <div className="flex flex-col min-h-screen">
             <PageHeader {...props} title={t('contact')} />

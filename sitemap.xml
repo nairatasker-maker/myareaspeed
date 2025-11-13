@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Main Application Entry Point -->
+  <url>
+    <loc>https://www.myareaspeed.com/</loc>
+    <lastmod>2024-07-21T10:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- Community Feedback Page -->
+  <url>
+    <loc>https://www.myareaspeed.com/#/community</loc>
+    <lastmod>2024-07-21T10:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Static Pages -->
+  <url>
+    <loc>https://www.myareaspeed.com/#/about</loc>
+    <lastmod>2024-07-21T10:00:00+00:00</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.myareaspeed.com/#/privacy</loc>
+    <lastmod>2024-07-21T10:00:00+00:00</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.myareaspeed.com/#/contact</loc>
+    <lastmod>2024-07-21T10:00:00+00:00</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
